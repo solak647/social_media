@@ -1,0 +1,36 @@
+Bonjour,
+
+Nous vous envoyons ce mail pour vous poser une question concernant le projet de social media analytics (projet 15). Etant donné que nous avons vu aujourd'hui même l'algorithme Dawid-Skene, nous pouvons commencer à implémenter notre projet. Toutefois, nous ne comprenons pas totalement les datasets.
+
+Il y a deux fichiers csv dans ce que vous nous avez fourni :
+- aij_fashion
+- social_features_fashion
+
+Le deuxième est à peu près compris. C'est une liste de tweet avec pour chacun de celui différentes infos ainsi que les keywords contenus dans celui-ci. Mais le premier dataset, c'est juste une liste de avec 3 variables à chaque fois. Que représente ces variables? Nous pensons ceci:
+- Première variable = id premier node
+- Deuxième variable = id deuxième node
+- Troisième variable = le poids ?? Elle est dans 99% des cas à 0, et de temps en temps à 1.
+
+Merci d'avance pour votre réponse,
+
+Thomas et Jérôme
+
+
+Hello,
+
+We are sending you this email to ask you a question about the social media analytics project (project 15). Since we have seen today the Dawid-Skene algorithm, we can start implementing our project. However, we do not fully understand the datasets provided,
+
+There are two csv files in what you have provided us:
+- aij_fashion
+- social_features_fashion
+
+The second is more or less understood. It is a twitter's user list with different information for each of them as well as some words contained in their tweets(?). But the first dataset is just a list of 3 variables each time. What do these variables represent? We think this:
+- First variable = id of the worker
+- Second variable = id of the tweet in social_features_fashion
+- Third variable = ???
+
+To resume, we don't really understand the aij_fashion dataset, and what does it represent.
+
+Thank you in advance for your answer,
+
+Thomas and Jerome
