@@ -1,6 +1,3 @@
-import numpy as np
-import sys
-
 import math
 import csv
 import random
@@ -245,226 +242,23 @@ def gete2wlandw2el(datafile):
 
     return e2wl,w2el,label_set
 
-def format_data(aij_fashion):
-    data = {}
-    for (worker,influencer,label) in aij_fashion:
-        if influencer not in data:
-            data[influencer] = {}
-        result_label = [0]
-        if label == 1:
-             result_label = [1]
-        data[influencer][worker] = result_label
-    return data
-  
-
-def fashion_to_counts(fashions):
-    """
-    Convert a matrix of fashions to count data
-    Args:
-        fashions: dictionary of label {influencers:{workers:[labels]}}
-    Returns:
-        influencers: list of influencers
-        workers: list of workers
-        choices: list of choices (1 or 0 in our case)
-        counts: 3d array of counts: [influencers x workers]
-    """
-    influencers = list(fashions)
-    nInfluencers = len(influencers)
-
-    workers = set()
-    choices = set()
-    for i in influencers:
-        i_workers = list(fashions[i])
-        for k in i_workers:
-            if k not in workers:
-                workers.add(k)
-            ik_label = fashions[i][k]
-            choices.update(ik_label)
-
-    choices = list(choices)
-    choices.sort()
-    nChoices = len(choices)
-    
-    workers = list(workers)
-    nWorkers = len(workers)
-
-    # create a 3d array to hold counts
-    counts = np.zeros([nInfluencers, nWorkers, nChoices])
-
-    # convert responses to counts
-    for influencer in influencers:
-        i = influencers.index(influencer)
-        for worker in fashions[influencer].keys():
-            k = workers.index(worker)
-            for label in fashions[influencer][worker]:
-                j = choices.index(label)
-                counts[i, k, j] += 1
-
-    return influencers, workers, choices, counts
-
-
-def majority_voting(counts):
-    [nInfluencers, nWorkers, nChoices] = np.shape(counts)
-    responses_sums = np.sum(counts, 1)
-    result = np.zeros([nInfluencers, nChoices])
-    for p in range(nInfluencers):
-        result[p, :] = responses_sums[p, :] / np.sum(responses_sums[p, :], dtype=float)
-    return result
-
-
-def m_step(counts, influencers_label):
-    [nInfluencers, nWorkers, nChoices] = np.shape(counts)
-
-    # compute class marginals --- current estimation of class prior
-    class_marginals = np.sum(influencers_label, 0) / float(nInfluencers)
-
-    # compute error rates
-    error_rates = np.zeros([nWorkers, nChoices, nChoices])
-    for k in range(nWorkers):
-        for j in range(nChoices):
-            for l in range(nChoices):
-                error_rates[k, j, l] = np.dot(
-                    influencers_label[:, j], counts[:, k, l])
-            sum_over_responses = np.sum(error_rates[k, j, :])
-            if sum_over_responses > 0:
-                error_rates[k, j, :] = error_rates[
-                    k, j, :] / float(sum_over_responses)
-
-    return class_marginals, error_rates
-
-
-def e_step(counts, class_marginals, error_rates):
-    [n_influencers, m_workers, m_choices] = np.shape(counts)
-
-    influencers_label = np.zeros([n_influencers, m_choices])
-
-    for i in range(n_influencers):
-        for j in range(m_choices):
-            estimate = class_marginals[j]
-            estimate *= np.prod(np.power(error_rates[:, j, :], counts[i, :, :]))
-            influencers_label[i, j] = estimate
-        question_sum = np.sum(influencers_label[i, :])
-        if question_sum > 0:
-            influencers_label[i, :] = influencers_label[i, :] / float(question_sum)
-    return influencers_label
-
-
-def calc_likelihood(counts, class_marginals, error_rates):
-    [n_influencers, m_workers, m_choices] = np.shape(counts)
-    log_L = 0.0
-
-    for i in range(n_influencers):
-        influencers_likelihood = 0.0
-        for j in range(m_choices):
-
-            class_prior = class_marginals[j]
-            influencers_class_likelihood = np.prod(
-                np.power(error_rates[:, j, :], counts[i, :, :]))
-            influencers_class_posterior = class_prior * influencers_class_likelihood
-            influencers_likelihood += influencers_class_posterior
-
-        temp = log_L + np.log(influencers_likelihood)
-        if np.isnan(temp) or np.isinf(temp):
-            sys.exit()
-        log_L = temp
-    return log_L
-
-def data_structure(counts) :
-    [n_influencers, m_workers, m_choices] = np.shape(counts)
-    print("potential influencers :", n_influencers)
-    print("number of workers :", m_workers)
-    print("number of choices :", m_choices)
 
 if __name__ == "__main__":
-
-    fashion = np.genfromtxt('data/aij_fashion.csv', delimiter=",", dtype=int)
-    fashion = format_data(fashion)
-    (influencers, workers, choices, counts) = fashion_to_counts(fashion)
-    data_structure(counts)
-    print("------------------ DS -----------------")
-    # Using majority rating to initialize labels
-    influencers_label = majority_voting(counts)
-
-    # initialize
-    nIter = 0
-    converged = False
-    old_class_marginals = None
-    old_error_rates = None
-    tol = 0.0000001
-    max_iter = 100
-    print("iteration", "likelihood", "class_marginals_diff", "error_rates_diff")
-    while not converged:
-        nIter += 1
-        (class_marginals, error_rates) = m_step(counts, influencers_label)
-        influencers_label = e_step(counts, class_marginals, error_rates)
-        log_L = calc_likelihood(counts, class_marginals, error_rates)
-        if old_class_marginals is not None:
-            class_marginals_diff = np.sum(
-                np.abs(class_marginals - old_class_marginals))
-            error_rates_diff = np.sum(np.abs(error_rates - old_error_rates))
-            print(nIter, '\t', log_L, '\t%.6f\t%.6f' % (class_marginals_diff, error_rates_diff))
-            if (class_marginals_diff < tol) or nIter >= max_iter:
-                converged = True
-        else:
-            print(nIter, '\t', log_L)
-
-        old_class_marginals = class_marginals
-        old_error_rates = error_rates
-    np.set_printoptions(precision=2, suppress=True)
-    #print(influencers_label)
-    result_LFC = np.argmax(influencers_label, axis=1)
-    i = 0
-    #print("------------")
-    #print("Result Matrix")
-    #print(result_LFC)
-    result_DS = {}
-    #print("Supposed influencers Nr. ")
-    for data in result_LFC:
-        result_DS[i]=data
-    #    if data == 1:
-    #        print(i)
-        i = i + 1
-
-    print(result_DS)
-
-    print("------------------ LFC -----------------")
+    result = {}
     datafile = "data/aij_fashion.csv"
     e2wl,w2el,label_set = gete2wlandw2el(datafile) # generate structures to pass into EM
     iterations = 20 # EM iteration number
     e2lpd, w2cm = EM(e2wl,w2el,label_set).Run(iterations)
 
-    result_LFC = {}
+    for i in w2cm:
+        print("worker", i, w2cm[i])
     for i in e2lpd:
-        # print("potential influencer",i,e2lpd[i])
+        print("potential influencer",i,e2lpd[i])
         if e2lpd[i]['0']<e2lpd[i]['1']:
-            result_LFC[i]= 1
+            result[i]=1
         else:
-            result_LFC[i]= 0
+            result[i]=0
 
-    print(result_LFC)
+    print(result)
 
-    #print("Supposed influencers Nr. ")
-
-    #for data in result_LFC:
-    #    if result_LFC[data] == 1:
-    #       print(data)
-
-truth = np.genfromtxt('data/labels_fashion.csv', delimiter=",", dtype=int)
-
-array_truth = []
-for item in truth:
-    array_truth.append(item[2])
-array_truth.remove(array_truth[0])
-
-from sklearn.metrics import accuracy_score, f1_score
-array_DS = list(result_DS.values())
-array_LFC = list(result_LFC.values())
-array_LFC = array_LFC[0:len(array_truth)]
-array_DS = array_DS[0:len(array_truth)]
-
-print("accuracy DS",accuracy_score(array_truth,array_DS,normalize=True))
-print("accuracy LFC",accuracy_score(array_truth,array_LFC,normalize=True))
-print("F1 DS",f1_score(array_truth,array_DS))
-print("F1 LFC",f1_score(array_truth,array_LFC))
-
-
+    print("Supposed influencers Nr. ")
