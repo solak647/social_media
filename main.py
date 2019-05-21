@@ -7,6 +7,7 @@ import random
 import sys
 import numpy as np
 
+
 class EM:
     def __init__(self,e2wl,w2el,label_set,beta_param={}):
         self.e2wl = e2wl
@@ -176,7 +177,6 @@ class EM:
 
         return lh
 
-
 ###################################
 # The above is the EM method (a class)
 # The following are several external functions
@@ -244,6 +244,9 @@ def gete2wlandw2el(datafile):
             label_set.append(label)
 
     return e2wl,w2el,label_set
+
+# ----------- DS --------------
+
 
 def format_data(aij_fashion):
     data = {}
@@ -335,7 +338,6 @@ def m_step(counts, influencers_label):
 
 def e_step(counts, class_marginals, error_rates):
     [n_influencers, m_workers, m_choices] = np.shape(counts)
-
     influencers_label = np.zeros([n_influencers, m_choices])
 
     for i in range(n_influencers):
@@ -369,14 +371,95 @@ def calc_likelihood(counts, class_marginals, error_rates):
         log_L = temp
     return log_L
 
+
 def data_structure(counts) :
     [n_influencers, m_workers, m_choices] = np.shape(counts)
     print("potential influencers :", n_influencers)
     print("number of workers :", m_workers)
     print("number of choices :", m_choices)
 
-if __name__ == "__main__":
 
+def fashion_split_train_test_val():
+    fashion = np.genfromtxt('data/aij_fashion.csv', delimiter=",", dtype=int)
+    fashion = format_data(fashion)
+    train = {}
+    test = {}
+    validation = {}
+    for line in fashion:
+        if line < 181:
+            validation[line]=fashion[line]
+        elif line < 363:
+            test[line]=fashion[line]
+        else :
+            train[line]=fashion[line]
+    return train, test, validation
+
+
+if __name__ == "__main__":
+    train, test, validation = fashion_split_train_test_val()
+    (influencers_validation, workers, choices, counts_validation) = fashion_to_counts(validation)
+    (influencers_test, workers, choices, counts_test) = fashion_to_counts(test)
+    (influencers_train, workers, choices, counts_train) = fashion_to_counts(train)
+
+    influencers_label = majority_voting(counts_train)
+
+    # initialize
+    nIter = 0
+    converged = False
+    old_class_marginals = None
+    old_error_rates = None
+    tol = 0.0000001
+    max_iter = 100
+    print("iteration", "likelihood", "class_marginals_diff", "error_rates_diff")
+    while not converged:
+        nIter += 1
+        (class_marginals, error_rates) = m_step(counts_train, influencers_label)
+        influencers_label = e_step(counts_train, class_marginals, error_rates)
+        log_L = calc_likelihood(counts_train, class_marginals, error_rates)
+        if old_class_marginals is not None:
+            class_marginals_diff = np.sum(
+                np.abs(class_marginals - old_class_marginals))
+            error_rates_diff = np.sum(np.abs(error_rates - old_error_rates))
+            print(nIter, '\t', log_L, '\t%.6f\t%.6f' % (class_marginals_diff, error_rates_diff))
+            if (class_marginals_diff < tol) or nIter >= max_iter:
+                converged = True
+        else:
+            print(nIter, '\t', log_L)
+
+        old_class_marginals = class_marginals
+        old_error_rates = error_rates
+
+    # WITH TEST SET
+    influencers_label = e_step(counts_test,class_marginals, error_rates)
+
+    np.set_printoptions(precision=2, suppress=True)
+    result = np.argmax(influencers_label, axis=1)
+
+    i = 0
+    result_DS = {}
+    for line in influencers_test:
+        result_DS[line] = result[i]
+        #    if data == 1:
+        #        print(i)
+        i = i + 1
+    print(result_DS)
+
+    truth = np.genfromtxt('data/labels_fashion.csv', delimiter=",", dtype=int)
+
+    array_truth = []
+    for item in truth:
+        array_truth.append(item[2])
+    array_truth=array_truth[182:]
+
+    from sklearn.metrics import accuracy_score, f1_score
+
+    array_DS = list(result_DS.values())
+
+    print("accuracy DS", accuracy_score(array_truth, array_DS, normalize=True))
+    print("F1 DS", f1_score(array_truth, array_DS))
+
+
+if __name__ == "__min__":
     fashion = np.genfromtxt('data/aij_fashion.csv', delimiter=",", dtype=int)
     fashion = format_data(fashion)
     (influencers, workers, choices, counts) = fashion_to_counts(fashion)
@@ -412,14 +495,14 @@ if __name__ == "__main__":
         old_error_rates = error_rates
     np.set_printoptions(precision=2, suppress=True)
     #print(influencers_label)
-    result_LFC = np.argmax(influencers_label, axis=1)
+    result = np.argmax(influencers_label, axis=1)
     i = 0
     #print("------------")
     #print("Result Matrix")
     #print(result_LFC)
     result_DS = {}
     #print("Supposed influencers Nr. ")
-    for data in result_LFC:
+    for data in result:
         result_DS[i]=data
     #    if data == 1:
     #        print(i)
@@ -449,22 +532,25 @@ if __name__ == "__main__":
     #    if result_LFC[data] == 1:
     #       print(data)
 
-truth = np.genfromtxt('data/labels_fashion.csv', delimiter=",", dtype=int)
+    truth = np.genfromtxt('data/labels_fashion.csv', delimiter=",", dtype=int)
 
-array_truth = []
-for item in truth:
-    array_truth.append(item[2])
-array_truth.remove(array_truth[0])
+    array_truth = []
+    for item in truth:
+        array_truth.append(item[2])
+    array_truth.remove(array_truth[0])
 
-from sklearn.metrics import accuracy_score, f1_score
-array_DS = list(result_DS.values())
-array_LFC = list(result_LFC.values())
-array_LFC = array_LFC[0:len(array_truth)]
-array_DS = array_DS[0:len(array_truth)]
+    from sklearn.metrics import accuracy_score, f1_score
+    array_DS = list(result_DS.values())
+    array_LFC = list(result_LFC.values())
+    array_LFC = array_LFC[0:len(array_truth)]
+    array_DS = array_DS[0:len(array_truth)]
 
-print("accuracy DS",accuracy_score(array_truth,array_DS,normalize=True))
-print("accuracy LFC",accuracy_score(array_truth,array_LFC,normalize=True))
-print("F1 DS",f1_score(array_truth,array_DS))
-print("F1 LFC",f1_score(array_truth,array_LFC))
+    print("accuracy DS",accuracy_score(array_truth,array_DS,normalize=True))
+    print("accuracy LFC",accuracy_score(array_truth,array_LFC,normalize=True))
+    print("F1 DS",f1_score(array_truth,array_DS))
+    print("F1 LFC",f1_score(array_truth,array_LFC))
+
+
+
 
 
