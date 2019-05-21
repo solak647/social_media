@@ -4,7 +4,6 @@ import random
 import sys
 import numpy as np
 
-
 # ----------- DS --------------
 # Dawid-Skene Algo adapted from https://github.com/SDey96/Fast-Dawid-Skene/blob/master/fast_dawid_skene/algorithms.py
 class DS:
@@ -13,7 +12,7 @@ class DS:
         self.class_marginals = 0
         self.error_rates = 0
 
-    def run(self):
+    def run(self, tol = 1e-5):
         # Using majority rating to initialize labels
         influencers_label = self.majority_voting(self.counts)
         # initialize
@@ -21,8 +20,7 @@ class DS:
         converged = False
         old_class_marginals = None
         old_error_rates = None
-        tol = 1e-5
-        max_iter = 500
+        max_iter = 200
         print("iteration", "likelihood", "class_marginals_diff", "error_rates_diff")
         while not converged:
             nIter += 1
