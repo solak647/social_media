@@ -229,6 +229,5 @@ if __name__ == "__main__":
     array_truth = array_truth[182:]
 
     array_DS = list(result_DS.values())
-    print(array_DS, array_truth)
     print("accuracy DS :", accuracy_score(array_truth, array_DS, normalize=True))
     print("F1 DS : ", f1_score(array_truth, array_DS))
