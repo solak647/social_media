@@ -7,7 +7,7 @@ import random
 import sys
 import numpy as np
 
-
+# LFC Algo, adapted from https://github.com/zhydhkcws/crowd_truth_infer/blob/master/methods/l_LFCbinary/method.py
 class EM:
     def __init__(self,e2wl,w2el,label_set,beta_param={}):
         self.e2wl = e2wl
@@ -246,6 +246,7 @@ def gete2wlandw2el(datafile):
     return e2wl,w2el,label_set
 
 # ----------- DS --------------
+# Dawid-Skene Algo adapted from https://github.com/SDey96/Fast-Dawid-Skene/blob/master/fast_dawid_skene/algorithms.py
 
 
 def format_data(aij_fashion):
@@ -395,71 +396,8 @@ def fashion_split_train_test_val():
     return train, test, validation
 
 
+# MAIN
 if __name__ == "__main__":
-    train, test, validation = fashion_split_train_test_val()
-    (influencers_validation, workers, choices, counts_validation) = fashion_to_counts(validation)
-    (influencers_test, workers, choices, counts_test) = fashion_to_counts(test)
-    (influencers_train, workers, choices, counts_train) = fashion_to_counts(train)
-
-    influencers_label = majority_voting(counts_train)
-
-    # initialize
-    nIter = 0
-    converged = False
-    old_class_marginals = None
-    old_error_rates = None
-    tol = 0.0000001
-    max_iter = 100
-    print("iteration", "likelihood", "class_marginals_diff", "error_rates_diff")
-    while not converged:
-        nIter += 1
-        (class_marginals, error_rates) = m_step(counts_train, influencers_label)
-        influencers_label = e_step(counts_train, class_marginals, error_rates)
-        log_L = calc_likelihood(counts_train, class_marginals, error_rates)
-        if old_class_marginals is not None:
-            class_marginals_diff = np.sum(
-                np.abs(class_marginals - old_class_marginals))
-            error_rates_diff = np.sum(np.abs(error_rates - old_error_rates))
-            print(nIter, '\t', log_L, '\t%.6f\t%.6f' % (class_marginals_diff, error_rates_diff))
-            if (class_marginals_diff < tol) or nIter >= max_iter:
-                converged = True
-        else:
-            print(nIter, '\t', log_L)
-
-        old_class_marginals = class_marginals
-        old_error_rates = error_rates
-
-    # WITH TEST SET
-    influencers_label = e_step(counts_test,class_marginals, error_rates)
-
-    np.set_printoptions(precision=2, suppress=True)
-    result = np.argmax(influencers_label, axis=1)
-
-    i = 0
-    result_DS = {}
-    for line in influencers_test:
-        result_DS[line] = result[i]
-        #    if data == 1:
-        #        print(i)
-        i = i + 1
-    print(result_DS)
-
-    truth = np.genfromtxt('data/labels_fashion.csv', delimiter=",", dtype=int)
-
-    array_truth = []
-    for item in truth:
-        array_truth.append(item[2])
-    array_truth=array_truth[182:]
-
-    from sklearn.metrics import accuracy_score, f1_score
-
-    array_DS = list(result_DS.values())
-
-    print("accuracy DS", accuracy_score(array_truth, array_DS, normalize=True))
-    print("F1 DS", f1_score(array_truth, array_DS))
-
-
-if __name__ == "__min__":
     fashion = np.genfromtxt('data/aij_fashion.csv', delimiter=",", dtype=int)
     fashion = format_data(fashion)
     (influencers, workers, choices, counts) = fashion_to_counts(fashion)
@@ -494,21 +432,14 @@ if __name__ == "__min__":
         old_class_marginals = class_marginals
         old_error_rates = error_rates
     np.set_printoptions(precision=2, suppress=True)
-    #print(influencers_label)
+
     result = np.argmax(influencers_label, axis=1)
     i = 0
-    #print("------------")
-    #print("Result Matrix")
-    #print(result_LFC)
     result_DS = {}
-    #print("Supposed influencers Nr. ")
+
     for data in result:
         result_DS[i]=data
-    #    if data == 1:
-    #        print(i)
         i = i + 1
-
-    print(result_DS)
 
     print("------------------ LFC -----------------")
     datafile = "data/aij_fashion.csv"
@@ -518,22 +449,13 @@ if __name__ == "__min__":
 
     result_LFC = {}
     for i in e2lpd:
-        # print("potential influencer",i,e2lpd[i])
         if e2lpd[i]['0']<e2lpd[i]['1']:
             result_LFC[i]= 1
         else:
             result_LFC[i]= 0
 
-    print(result_LFC)
-
-    #print("Supposed influencers Nr. ")
-
-    #for data in result_LFC:
-    #    if result_LFC[data] == 1:
-    #       print(data)
-
+    # EVALUATION WITH GOLDEN LABELS
     truth = np.genfromtxt('data/labels_fashion.csv', delimiter=",", dtype=int)
-
     array_truth = []
     for item in truth:
         array_truth.append(item[2])
@@ -545,12 +467,67 @@ if __name__ == "__min__":
     array_LFC = array_LFC[0:len(array_truth)]
     array_DS = array_DS[0:len(array_truth)]
 
-    print("accuracy DS",accuracy_score(array_truth,array_DS,normalize=True))
-    print("accuracy LFC",accuracy_score(array_truth,array_LFC,normalize=True))
-    print("F1 DS",f1_score(array_truth,array_DS))
-    print("F1 LFC",f1_score(array_truth,array_LFC))
+    print("accuracy DS :",accuracy_score(array_truth,array_DS,normalize=True))
+    print("accuracy LFC :",accuracy_score(array_truth,array_LFC,normalize=True))
+    print("F1 DS :",f1_score(array_truth,array_DS))
+    print("F1 LFC :",f1_score(array_truth,array_LFC))
 
+    print("--------- PART WITH 60% training, 20% test, 20% validation ----------")
+    train, test, validation = fashion_split_train_test_val()
+    (influencers_validation, workers, choices, counts_validation) = fashion_to_counts(validation)
+    (influencers_test, workers, choices, counts_test) = fashion_to_counts(test)
+    (influencers_train, workers, choices, counts_train) = fashion_to_counts(train)
 
+    influencers_label = majority_voting(counts_train)
 
+    # initialize
+    nIter = 0
+    converged = False
+    old_class_marginals = None
+    old_error_rates = None
+    tol = 0.0000001
+    max_iter = 100
+    print("iteration", "likelihood", "class_marginals_diff", "error_rates_diff")
+    while not converged:
+        nIter += 1
+        (class_marginals, error_rates) = m_step(counts_train, influencers_label)
+        influencers_label = e_step(counts_train, class_marginals, error_rates)
+        log_L = calc_likelihood(counts_train, class_marginals, error_rates)
+        if old_class_marginals is not None:
+            class_marginals_diff = np.sum(
+                np.abs(class_marginals - old_class_marginals))
+            error_rates_diff = np.sum(np.abs(error_rates - old_error_rates))
+            print(nIter, '\t', log_L, '\t%.6f\t%.6f' % (class_marginals_diff, error_rates_diff))
+            if (class_marginals_diff < tol) or nIter >= max_iter:
+                converged = True
+        else:
+            print(nIter, '\t', log_L)
 
+        old_class_marginals = class_marginals
+        old_error_rates = error_rates
 
+    # WITH TEST SET
+    influencers_label = e_step(counts_test, class_marginals, error_rates)
+
+    np.set_printoptions(precision=2, suppress=True)
+    result = np.argmax(influencers_label, axis=1)
+
+    i = 0
+    result_DS = {}
+    for line in influencers_test:
+        result_DS[line] = result[i]
+        i = i + 1
+
+    truth = np.genfromtxt('data/labels_fashion.csv', delimiter=",", dtype=int)
+
+    array_truth = []
+    for item in truth:
+        array_truth.append(item[2])
+    array_truth = array_truth[182:]
+
+    from sklearn.metrics import accuracy_score, f1_score
+
+    array_DS = list(result_DS.values())
+
+    print("accuracy DS :", accuracy_score(array_truth, array_DS, normalize=True))
+    print("F1 DS : ", f1_score(array_truth, array_DS))
