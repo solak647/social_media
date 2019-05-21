@@ -162,7 +162,6 @@ if __name__ == "__main__":
     print("------------------ DS -----------------")
     ds = DS(counts)
     result = ds.run()
-    sys.exit(0)
     i = 0
     result_DS = {}
 
@@ -198,8 +197,8 @@ if __name__ == "__main__":
 
     print("accuracy DS :",accuracy_score(array_truth,array_DS,normalize=True))
     print("accuracy LFC :",accuracy_score(array_truth,array_LFC,normalize=True))
-    print("F1 DS :",f1_score(array_truth,array_DS))
-    print("F1 LFC :",f1_score(array_truth,array_LFC))
+    #print("F1 DS :",f1_score(array_truth,array_DS[:len(array_truth)]))
+    #print("F1 LFC :",f1_score(array_truth,array_LFC[:len(array_truth)]))
 
     print("--------- PART WITH 60% training, 20% test, 20% validation ----------")
     train, test, validation = fashion_split_train_test_val()
@@ -229,9 +228,7 @@ if __name__ == "__main__":
         array_truth.append(item[2])
     array_truth = array_truth[182:]
 
-    from sklearn.metrics import accuracy_score, f1_score
-
     array_DS = list(result_DS.values())
-
+    print(array_DS, array_truth)
     print("accuracy DS :", accuracy_score(array_truth, array_DS, normalize=True))
     print("F1 DS : ", f1_score(array_truth, array_DS))
