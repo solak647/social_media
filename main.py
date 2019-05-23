@@ -6,6 +6,7 @@ import numpy as np
 from LFS import EM
 from DS import DS
 from sklearn.metrics import accuracy_score, f1_score
+import matplotlib.pyplot as plt
 
 ###################################
 # The above is the EM method (a class)
@@ -50,7 +51,20 @@ def getaccuracy(truthfile, e2lpd, label_set):
 
     return tcount*1.0/count
 
-
+def plot_distributions(aij_fashion):
+    data = {}
+    for (worker_id, influencer_id, label) in aij_fashion:
+        if worker_id not in data:
+            data[worker_id] = []
+        data[worker_id].append([influencer_id, label])
+    distributions = {}
+    for k, v in data.items():
+        distributions[k] = 0
+        for element in v:
+            if element[1] == 1:
+                    distributions[k] += 1
+    plt.bar(distributions.keys(), distributions.values(), color='g')
+    plt.show()
 def gete2wlandw2el(datafile):
     e2wl = {}
     w2el = {}
@@ -162,10 +176,11 @@ def fashion_to_counts(fashions):
 
 # MAIN
 if __name__ == "__main__":
-    fashion = np.genfromtxt('data/aij_fashion.csv', delimiter=",", dtype=int)
-    fashion = format_data(fashion)
+    aij_fashion = np.genfromtxt('data/aij_fashion.csv', delimiter=",", dtype=int)
+    fashion = format_data(aij_fashion)
     (influencers, workers, choices, counts) = fashion_to_counts(fashion)
     data_structure(counts)
+    plot_distributions(aij_fashion)
     print("------------------ MV -----------------")
     influencers_label = majority_voting(counts)
     result = np.argmax(influencers_label, axis=1)
