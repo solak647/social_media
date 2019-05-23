@@ -107,6 +107,13 @@ def format_data(aij_fashion):
         data[influencer][worker] = result_label
     return data
 
+def majority_voting(counts):
+    [nInfluencers, nWorkers, nChoices] = np.shape(counts)
+    responses_sums = np.sum(counts, 1)
+    result = np.zeros([nInfluencers, nChoices])
+    for p in range(nInfluencers):
+        result[p, :] = responses_sums[p, :] / np.sum(responses_sums[p, :], dtype=float)
+    return result
 
 def fashion_to_counts(fashions):
     """
@@ -159,6 +166,14 @@ if __name__ == "__main__":
     fashion = format_data(fashion)
     (influencers, workers, choices, counts) = fashion_to_counts(fashion)
     data_structure(counts)
+    print("------------------ MV -----------------")
+    influencers_label = majority_voting(counts)
+    result = np.argmax(influencers_label, axis=1)
+    result_MV = {}
+    i = 0
+    for data in result:
+        result_MV[i]=data
+        i = i + 1
     print("------------------ DS -----------------")
     ds = DS(counts)
     result = ds.run()
@@ -189,12 +204,14 @@ if __name__ == "__main__":
         array_truth.append(item[2])
     array_truth.remove(array_truth[0])
 
-
+    array_MV = list(result_MV.values())
     array_DS = list(result_DS.values())
     array_LFC = list(result_LFC.values())
+    array_MV = array_MV[0:len(array_truth)]
     array_LFC = array_LFC[0:len(array_truth)]
     array_DS = array_DS[0:len(array_truth)]
 
+    print("accuracy MV :",accuracy_score(array_truth,array_MV,normalize=True))
     print("accuracy DS :",accuracy_score(array_truth,array_DS,normalize=True))
     print("accuracy LFC :",accuracy_score(array_truth,array_LFC,normalize=True))
     #print("F1 DS :",f1_score(array_truth,array_DS[:len(array_truth)]))

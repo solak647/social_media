@@ -15,6 +15,7 @@ class DS:
     def run(self, tol = 1e-5):
         # Using majority rating to initialize labels
         influencers_label = self.majority_voting(self.counts)
+
         # initialize
         nIter = 0
         converged = False
